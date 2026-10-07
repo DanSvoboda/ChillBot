@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>ChillBot · Your chilli companion</title>
+	<style>
+		:root { color-scheme: light; --ink:#24352c; --muted:#718077; --green:#28563e; --line:#e2e8de; }
+		* { box-sizing:border-box; }
+		body { margin:0; font-family:Inter,system-ui,sans-serif; color:var(--ink); background:#f8faf5; }
+		button,input { font:inherit; }
+		button { cursor:pointer; }
+		.app { display:flex; min-height:100dvh; }
+		aside { width:250px; padding:30px 22px; background:#eef2e8; border-right:1px solid var(--line); display:flex; flex-direction:column; gap:30px; }
+		.brand { display:flex; align-items:center; gap:10px; font-size:24px; font-weight:750; letter-spacing:-1px; }
+		.logo { display:grid; place-items:center; width:42px; height:42px; border-radius:13px; background:var(--green); font-size:25px; }
+		.new { border:1px solid #c5d2bf; border-radius:10px; padding:13px; color:var(--green); background:transparent; text-align:left; font-weight:600; }
+		.label { font-size:11px; letter-spacing:1.6px; color:var(--muted); font-weight:700; margin:0 0 15px; }
+		.nav { display:block; width:100%; padding:12px 10px; border:0; background:none; text-align:left; color:#55675a; border-radius:8px; margin:4px 0; }
+		.nav:hover { background:#dfe8d9; }
+		.sidebar-bottom { margin-top:auto; padding:18px 4px 0; border-top:1px solid #d5dfce; font-size:12px; line-height:1.7; color:#667763; }
+		main { flex:1; min-width:0; display:flex; flex-direction:column; height:100dvh; }
+		header { padding:22px 36px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
+		header strong { font-size:14px; }
+		.status { font-size:12px; color:#637b60; background:#edf3e7; padding:7px 12px; border-radius:30px; }
+		.status::before { content:'●'; color:#78a461; margin-right:7px; }
+		.scroll { flex:1; overflow:auto; padding:32px 28px; }
+		.welcome { max-width:790px; margin:35px auto 30px; text-align:center; }
+		.pepper { background:#edf2e5; border:1px solid #dfe7d6; border-radius:24px; width:85px; height:85px; display:grid; place-items:center; font-size:46px; margin:0 auto 24px; transform:rotate(-6deg); }
+		.eyebrow { text-transform:uppercase; letter-spacing:2px; font-size:11px; font-weight:700; color:#6a8460; }
+		h1 { font-size:clamp(28px,4vw,43px); font-weight:650; letter-spacing:-1.7px; margin:13px 0; }
+		h1 span { color:#b65b38; }
+		.intro { color:var(--muted); font-size:15px; line-height:1.8; margin:0 auto; max-width:470px; }
+		.cards { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:32px 0; text-align:left; }
+		.card { background:#fff; border:1px solid var(--line); padding:20px; border-radius:14px; text-align:left; color:var(--ink); transition:transform .15s,border-color .15s; }
+		.card:hover { transform:translateY(-3px); border-color:#91ab81; }
+		.card-icon { display:block; font-size:24px; margin-bottom:14px; }
+		.card strong { display:block; font-size:14px; margin-bottom:7px; }
+		.card small { color:var(--muted); line-height:1.6; }
+		.tip { font-size:12px; color:#899280; }
+		#messages { max-width:790px; margin:auto; }
+		.message { display:flex; gap:12px; margin:22px 0; align-items:flex-start; }
+		.avatar { flex-shrink:0; display:grid; place-items:center; width:34px; height:34px; border-radius:10px; background:#e6eedc; }
+		.bubble { padding:14px 18px; border:1px solid var(--line); border-radius:0 14px 14px 14px; background:white; line-height:1.7; font-size:14px; white-space:pre-wrap; overflow-wrap:anywhere; }
+		.user { flex-direction:row-reverse; }
+		.user .bubble { background:#eaf1e3; border-radius:14px 0 14px 14px; }
+		.composer-area { padding:16px 28px 20px; }
+		form { max-width:790px; margin:auto; display:flex; align-items:center; gap:10px; padding:10px 12px 10px 20px; background:#fff; border:1px solid #d7e0d0; border-radius:16px; box-shadow:0 4px 20px #24352c06; }
+		input { width:100%; min-width:0; padding:10px 0; border:0; outline:none; color:var(--ink); background:transparent; }
+		input::placeholder { color:#94a08f; }
+		form:focus-within { border-color:#6f9461; }
+		.send { border:0; border-radius:10px; background:var(--green); color:white; width:42px; height:42px; flex-shrink:0; font-size:22px; }
+		.send:disabled { opacity:.5; cursor:wait; }
+		.disclaimer { text-align:center; font-size:11px; color:#929b8b; margin:12px 0 0; }
+		button:focus-visible { outline:3px solid #a5be92; outline-offset:3px; }
+		@media(max-width:700px) { aside { display:none; } header { padding:18px 20px; } .scroll { padding:20px 16px; } .welcome { margin-top:14px; } .cards { gap:10px; } .card { padding:16px; } .composer-area { padding:12px 16px; } }
+		@media(prefers-reduced-motion:reduce) { .card { transition:none; } }
+	</style>
+</head>
+<body>
+	<div class="app">
+		<aside aria-label="Chat navigation">
+			<div class="brand"><span class="logo" aria-hidden="true">🌶️</span> ChillBot</div>
+			<button class="new" id="new-chat">＋ &nbsp; New conversation</button>
+			<section><p class="label">EXPLORE THE WORLD OF CHILLIES</p>
+				<button class="nav" data-prompt="How do I grow chillies from seeds?">🌱 &nbsp; Growing & care</button>
+				<button class="nav" data-prompt="Explain the Scoville scale and chilli heat levels.">🔥 &nbsp; Heat & varieties</button>
+				<button class="nav" data-prompt="How can I cook with and preserve chillies?">🍲 &nbsp; Recipes & kitchen</button>
+				<button class="nav" data-prompt="Tell me about the origins of chillies.">🌍 &nbsp; Chilli discoveries</button>
+			</section>
+			<div class="sidebar-bottom">A little curiosity. A lot of flavour.<br>Your companion from seed to spice.</div>
+		</aside>
+		<main>
+			<header><strong>Chilli knowledge, served fresh.</strong><span class="status">Let's talk chillies</span></header>
+			<div class="scroll" id="chat-scroll">
+				<section class="welcome" id="welcome">
+					<div class="pepper" aria-hidden="true">🌶️</div>
+					<div class="eyebrow">Your personal chilli companion</div>
+					<h1>A little heat.<br><span>Endless possibilities.</span></h1>
+					<p class="intro">From your first seedling to your next fiery recipe.<br>Ask ChillBot anything about the world of chillies.</p>
+					<div class="cards">
+						<button class="card" data-prompt="How do I grow chillies from seeds?"><span class="card-icon" aria-hidden="true">🌱</span><strong>Grow something spicy ↗</strong><small>Seed starting, happy plants, and better harvests.</small></button>
+						<button class="card" data-prompt="Which chilli should I try if I like mild heat?"><span class="card-icon" aria-hidden="true">🔥</span><strong>Find your kind of heat ↗</strong><small>Explore varieties and the Scoville scale.</small></button>
+						<button class="card" data-prompt="How can I make a simple fresh chilli salsa?"><span class="card-icon" aria-hidden="true">🥣</span><strong>Spice up your kitchen ↗</strong><small>Recipes, hot sauces, and preserving your crop.</small></button>
+						<button class="card" data-prompt="Tell me some interesting facts about chillies."><span class="card-icon" aria-hidden="true">🧭</span><strong>Follow your curiosity ↗</strong><small>The science, stories, and origins of chillies.</small></button>
+					</div>
+					<p class="tip">Not sure where to start? Pick a topic above.</p>
+				</section>
+				<div id="messages" role="log" aria-live="polite" aria-label="Conversation"></div>
+			</div>
+			<div class="composer-area">
+				<form id="chat-form"><input id="question" aria-label="Your chilli question" placeholder="Ask anything about chillies…" autocomplete="off" required maxlength="4000"><button class="send" aria-label="Send message" type="submit">↑</button></form>
+				<p class="disclaimer">ChillBot can make mistakes. Double-check important growing and food safety advice.</p>
+			</div>
+		</main>
+	</div>
+	<script>
+		const form = document.getElementById('chat-form');
+		const input = document.getElementById('question');
+		const messages = document.getElementById('messages');
+		const welcome = document.getElementById('welcome');
+		const scroller = document.getElementById('chat-scroll');
+		const send = form.querySelector('button');
+		let history = [], controller = null;
+		function addMessage(text, role) {
+			const row = document.createElement('div');
+			row.className = 'message ' + role;
+			const avatar = document.createElement('span');
+			avatar.className = 'avatar';
+			avatar.textContent = role === 'user' ? 'You' : '🌶️';
+			const bubble = document.createElement('div');
+			bubble.className = 'bubble';
+			bubble.textContent = text;
+			row.append(avatar, bubble);
+			messages.append(row);
+			scroller.scrollTop = scroller.scrollHeight;
+			return bubble;
+		}
+		form.addEventListener('submit', async event => {
+			event.preventDefault();
+			const question = input.value.trim();
+			if (!question || controller) return;
+			welcome.hidden = true;
+			addMessage(question, 'user');
+			history.push({ role:'user', content:question });
+			input.value = '';
+			send.disabled = true;
+			const pending = addMessage('Thinking about chillies…', 'assistant');
+			const request = new AbortController();
+			controller = request;
+			try {
+				// Connect this endpoint to your server-side AI provider; never expose API keys here.
+				const csrf = document.cookie.split('; ').find(cookie => cookie.startsWith('csrftoken='));
+				const headers = { 'Content-Type':'application/json' };
+				if (csrf) headers['X-CSRFToken'] = decodeURIComponent(csrf.slice(10));
+				const response = await fetch('/api/chat', { method:'POST', headers, credentials:'same-origin', body:JSON.stringify({ message:question, messages:history }), signal:request.signal });
+				if (!response.ok) throw new Error('Request failed');
+				const data = await response.json();
+				if (typeof data.reply !== 'string' || !data.reply.trim()) throw new Error('Invalid reply');
+				pending.textContent = data.reply;
+				history.push({ role:'assistant', content:data.reply });
+			} catch (error) {
+				if (error.name !== 'AbortError') {
+					pending.textContent = 'Unable to reach ChillBot. Please try again. If you’re setting up this app, connect /api/chat to your AI service.';
+					history.pop();
+				}
+			} finally {
+				if (controller === request) { controller = null; send.disabled = false; input.focus(); }
+				scroller.scrollTop = scroller.scrollHeight;
+			}
+		});
+		document.querySelectorAll('[data-prompt]').forEach(button => button.addEventListener('click', () => {
+			if (controller) return;
+			input.value = button.dataset.prompt;
+			form.requestSubmit();
+		}));
+		document.getElementById('new-chat').addEventListener('click', () => {
+			if (controller) controller.abort();
+			controller = null;
+			history = [];
+			messages.replaceChildren();
+			welcome.hidden = false;
+			send.disabled = false;
+			input.value = '';
+			input.focus();
+		});
+	</script>
+</body>
+</html>

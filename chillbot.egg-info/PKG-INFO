@@ -1,0 +1,12 @@
+Metadata-Version: 2.4
+Name: chillbot
+Version: 0.1.0
+Summary: AI chatbot about chilli peppers with RAG and MCP model servers
+Requires-Python: >=3.11
+Requires-Dist: chromadb
+Requires-Dist: Flask
+Requires-Dist: openai
+Requires-Dist: python-dotenv
+Requires-Dist: langchain-community
+Requires-Dist: langchain-text-splitters
+Requires-Dist: pypdf

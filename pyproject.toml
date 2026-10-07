@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chillbot"
+version = "0.1.0"
+description = "AI chatbot about chilli peppers with RAG and MCP model servers"
+requires-python = ">=3.11"
+dependencies = [
+	"chromadb",
+	"Flask",
+	"openai",
+	"python-dotenv",
+	"langchain-community",
+	"langchain-text-splitters",
+	"pypdf",
+]
+
+[tool.setuptools]
+packages = []

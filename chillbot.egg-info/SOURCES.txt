@@ -1,0 +1,10 @@
+README.md
+pyproject.toml
+chillbot.egg-info/PKG-INFO
+chillbot.egg-info/SOURCES.txt
+chillbot.egg-info/dependency_links.txt
+chillbot.egg-info/requires.txt
+chillbot.egg-info/top_level.txt
+tests/test_chat.py
+tests/test_mcp.py
+tests/test_rag.py
