@@ -7,10 +7,9 @@ client = chromadb.PersistentClient("/data/chroma_db")
 collection = client.get_or_create_collection("chilli_collection")
 
 class DocumentDB:
-    def __init__(self, collection):
-        self.collection = collection
-        if self.collection.count() == 0:
-            self.start_db(self.collection)
+    def __init__(self):
+        if collection.count() == 0:
+            self.start_db(collection)
         
     def create_document(self, document, metadata, doc_id):
         self.collection.add(
@@ -32,6 +31,12 @@ class DocumentDB:
                         metadata={"source": "knowledge"},
                         doc_id=f"{doc.metadata['source']}_{i}"
                     )
-
+                    
+    def get_documents(self, query):
+        results = self.collection.query(
+            query_texts=[query],
+            n_results=5
+        )
+        return results['documents']
 
     
