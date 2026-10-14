@@ -1,8 +1,9 @@
 from mcp.server import MCPServer
 
-
 mcp = MCPServer()
 
+HOST = "0.0.0.0"
+PORT = 5002
 
 @mcp.tool()
 def predict_burn_intensity(scoville_heat_units: float, reference_heat_units: float) -> str:
@@ -32,11 +33,16 @@ def predict_burn_intensity(scoville_heat_units: float, reference_heat_units: flo
 
     return f"Predicted burn: {feeling} ({ratio:.1f}x the reference heat)."
 
+def get_MCP_url():
+    """
+    Returns the URL for the MCP server.
+    """
+    return f"http://{HOST}:{PORT}"
 
 if __name__ == "__main__":
     print("Starting the Will It Burn MCP Server...")
     mcp.run(
         transport="streamable-http",
-        host="0.0.0.0",
-        port=5001,
+        host=HOST,
+        port=PORT,
     )
