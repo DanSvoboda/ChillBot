@@ -1,25 +1,41 @@
+import base64
+import io
 from mcp.server import MCPServer
+from PIL import Image
+from mcp_servers.variety_classifier.model import variety_model
 
 mcp = MCPServer()
 
-HOST = "0.0.0.0"
+HOST = "localhost"
 PORT = 5001
 
+_model = None
+
+def get_model():
+    # Load lazily so importing this file (e.g. for get_MCP_url) doesn't load ResNet
+    global _model
+    if _model is None:
+        _model = variety_model(load_data=False)
+    return _model
+
 @mcp.tool()
-def classify_plant_type(image: bytes) -> str:
+def classify_plant_type(image_base64: str) -> str:
     """
-    Classifies the type of chilli plant based on the provided image.
+    Identifies the chilli variety in a photo.
 
     Args:
-        image (bytes): The image of the chilli plant in bytes format.
+        image_base64: The photo (JPEG or PNG) encoded as a base64 string.
 
     Returns:
-        str: The type of chilli plant.
+        The top 3 most likely chilli varieties with their probabilities.
     """
-    # Placeholder for actual classification logic
-    # In a real implementation, you would load a trained model and use it to classify the image.
-    return "Chilli Plant Type A"  # Example return value
+    image_bytes = base64.b64decode(image_base64)
+    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
+    results = get_model().predict(image)
+
+    lines = [f"- {name}: {prob:.1%}" for name, prob in results]
+    return "Most likely chilli varieties:\n" + "\n".join(lines)
 
 def get_MCP_url():
     """
