@@ -16,3 +16,4 @@ build/
 dist/
 *.egg-info/
 __pycache__/
+models/varieties/*
