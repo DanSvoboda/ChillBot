@@ -2,9 +2,12 @@ import flask
 from flask import render_template
 from web.rag import DocumentDB
 from openai import OpenAI
+from web.mcp_client import get_MCP_urls
+
 
 
 vectorDB = DocumentDB()
+client = OpenAI()
 app = flask.Flask(__name__)
 
 @app.route("/")
