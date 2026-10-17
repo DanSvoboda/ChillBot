@@ -37,11 +37,17 @@ def classify_plant_type(image_base64: str) -> str:
     lines = [f"- {name}: {prob:.1%}" for name, prob in results]
     return "Most likely chilli varieties:\n" + "\n".join(lines)
 
-def get_MCP_url():
+def get_MCP():
     """
     Returns the URL for the MCP server.
     """
-    return f"http://{HOST}:{PORT}"
+    return {
+            "type": "mcp",
+            "server_label": "variety_classifier",
+            "description": "Classifies the variety of chilli plants from images.",
+            "server_url": f"http://{HOST}:{PORT}/mcp",
+            "require_approval": "never", 
+        }
 
 if __name__ == "__main__":
     print("Starting the Chilli Plant Classifier MCP Server...")
