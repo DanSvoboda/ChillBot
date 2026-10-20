@@ -1,16 +1,13 @@
 # ChillBot
 
-AI chatbot o chillipaprickach s Flask frontendem a backendem, RAG
-a dvema MCP servery pro rozpoznani odrud a zdravotniho stavu rostlin.
-
-**Zatim jde jen o kostru projektu. Kod, zavislosti, data a modely chybi,
-takze aplikaci ani Docker image zatim nelze spustit nebo sestavit.**
+AI chatbot o chilli paprickach s Flask frontendem a backendem a MCP
+servery pro praci s chilli.
 
 ## Struktura
 
 ```text
-flask/          Flask aplikace, frontend, RAG a MCP klient
-mcp_servers/    Dva servery: variety_classifier a plant_health
+web/            Flask aplikace, frontend a MCP klient
+mcp_servers/    MCP servery: variety_classifier a will_it_burn
 data/
   training/     Trenovaci fotografie a anotace pro oba modely
   knowledge/    Dokumenty o chillipaprickach pro RAG
@@ -24,50 +21,74 @@ compose.yaml    Spusteni kontejneru a pripojeni dat
 .env.example    Vzor konfigurace bez tajnych hodnot
 ```
 
-Trenovaci skripty ukladaji modely do `models/`. MCP servery je pouze
-nacitaji pro predikce. RAG vyhledava v dokumentech; netrenuje ML modely.
-Data, vahy a tajne hodnoty se neverzuji ani nekopiruji do Docker image.
+MCP servery poskytuji nastroje `classify_plant_type` a
+`predict_burn_intensity`. Flask je zpristupni modelu jako nastroje a
+zpracuje pripadne tool calls.
 
 ## Architektura
 
 ```mermaid
 flowchart LR
     Browser[Prohlizec] --> Flask
-    subgraph Docker[Tri Docker kontejnery]
+    subgraph Docker[Flask a MCP servery]
         Flask[Flask: frontend a API]
-        Variety[MCP: odrudy]
-        Health[MCP: zdravi rostlin]
+        Variety[MCP: klasifikace odrud]
+        Burn[MCP: odhad palivosti]
         Flask -->|Streamable HTTP| Variety
-        Flask -->|Streamable HTTP| Health
+        Flask -->|Streamable HTTP| Burn
     end
     Flask --> RAG[RAG: vektorovy index]
     Flask --> LLM[LLM]
     Variety --> Varieties[models/varieties]
-    Health --> PlantHealth[models/plant_health]
+    Burn --> BurnLogic[Burn prediction]
 ```
 
-Pouze Flask je dostupny na hostiteli. MCP servery komunikuji v Docker siti
-a maji sve modely pripojene jen pro cteni. LLM neni soucasti Compose.
+Flask komunikuje s MCP servery pres Streamable HTTP. LLM neni soucasti
+projektu; aplikace pouziva OpenAI-kompatibilni endpoint.
 
-## Priprava a spusteni
+## Rychle spusteni lokalne
 
-Potrebujes Docker Desktop s Linux containers a Docker Compose 2.24+.
-Pred prvnim spustenim dopln kod, zavislosti do `pyproject.toml`, LLM
-a embedding model, konfiguraci do `.env`, vahy ML modelu a RAG index.
-Pro trenovani a indexovani mimo Docker pouzij Python 3.11 a skripty v `scripts/`.
+Pouzij Python 3.11+ a spust prikazy z korene projektu:
 
-Kontrola konfigurace funguje uz nyni:
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e .
+```
+
+Spust oba MCP servery v samostatnych terminalech:
+
+```powershell
+python mcp_servers\will_it_burn\server.py
+```
+
+```powershell
+$env:MCP_HOST = "localhost"
+$env:MCP_PORT = "5001"
+python mcp_servers\variety_classifier\server.py
+```
+
+V dalsim terminalu spust Flask:
+
+```powershell
+python -m web.app
+```
+
+Otevri `http://127.0.0.1:5000`. V aplikaci otevri **API settings** a
+nastav API key pro OpenAI-kompatibilni endpoint. MCP servery musi bezet
+pred odeslanim prvni zpravy.
+
+## Docker Compose
+
+Pokud mas pripraveny Docker Desktop, muzes konfiguraci overit a spustit:
 
 ```powershell
 docker compose config --quiet
+docker compose up --build
 ```
 
-Po dokonceni implementace, z korene projektu:
+Aplikace bude dostupna na `http://127.0.0.1:5000`. Ukonceni:
 
 ```powershell
-docker compose up --build -d
-docker compose logs -f
 docker compose down
-```
 
-Chat bude na `http://127.0.0.1:5000`.
+```

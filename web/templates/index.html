@@ -20,7 +20,27 @@
 			<div class="sidebar-bottom">A little curiosity. A lot of flavour.<br>Your companion from seed to spice.</div>
 		</aside>
 		<main>
-			<header><strong>Chilli knowledge, served fresh.</strong><span class="status">Let's talk chillies</span></header>
+			<header>
+				<strong>Chilli knowledge, served fresh.</strong>
+				<div>
+					<button class="settings" id="settings-toggle" type="button">API settings</button>
+					<span class="status">Let's talk chillies</span>
+				</div>
+			</header>
+			<section class="settings-panel" id="settings-panel" hidden aria-label="API settings">
+				<form id="settings-form">
+					<label for="api-key">OpenAI API key</label>
+					<div class="settings-fields">
+						<input id="api-key" type="password" autocomplete="off" placeholder="sk-…" required>
+						<button class="save-settings" type="submit">Save key</button>
+					</div>
+					<p class="settings-message" id="settings-message" role="status"></p>
+				</form>
+			</section>
+			<div class="api-key-notice" id="api-key-notice" hidden role="alert">
+				<span>No API key is configured. Go to API settings and set your api_key to start chatting.</span>
+				<button id="api-key-notice-action" type="button">Go to API settings</button>
+			</div>
 			<div class="scroll" id="chat-scroll">
 				<section class="welcome" id="welcome">
 					<div class="pepper" aria-hidden="true">🌶️</div>
@@ -43,6 +63,8 @@
 			</div>
 		</main>
 	</div>
+	<script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
 	<script src="{{ url_for('static', filename='chat.js') }}"></script>
 </body>
 </html>

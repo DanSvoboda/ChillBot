@@ -15,8 +15,20 @@ aside { width:250px; padding:30px 22px; background:#eef2e8; border-right:1px sol
 main { flex:1; min-width:0; display:flex; flex-direction:column; height:100dvh; }
 header { padding:22px 36px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
 header strong { font-size:14px; }
+header > div { display:flex; align-items:center; gap:12px; }
+.settings { border:0; background:transparent; color:var(--green); font-size:12px; padding:7px 0; }
 .status { font-size:12px; color:#637b60; background:#edf3e7; padding:7px 12px; border-radius:30px; }
 .status::before { content:'●'; color:#78a461; margin-right:7px; }
+.settings-panel { padding:16px 36px; background:#f1f5ed; border-bottom:1px solid var(--line); }
+.settings-panel form { display:block; max-width:790px; padding:0; background:transparent; border:0; box-shadow:none; }
+.settings-panel label { display:block; margin-bottom:8px; font-size:12px; font-weight:600; }
+.settings-fields { display:flex; gap:10px; }
+.settings-fields input { padding:10px 12px; background:#fff; border:1px solid #d7e0d0; border-radius:8px; }
+.save-settings { border:0; border-radius:8px; padding:0 16px; background:var(--green); color:#fff; font-size:12px; }
+.settings-message { min-height:16px; margin:8px 0 0; color:var(--muted); font-size:12px; }
+.api-key-notice { display:flex; align-items:center; justify-content:center; gap:12px; padding:10px 20px; background:#fff4e5; border-bottom:1px solid #f0d6ae; color:#80551d; font-size:13px; }
+.api-key-notice[hidden] { display:none; }
+.api-key-notice button { border:0; border-radius:7px; padding:7px 11px; background:#80551d; color:#fff; font-size:12px; }
 .scroll { flex:1; overflow:auto; padding:32px 28px; }
 .welcome { max-width:790px; margin:35px auto 30px; text-align:center; }
 .pepper { background:#edf2e5; border:1px solid #dfe7d6; border-radius:24px; width:85px; height:85px; display:grid; place-items:center; font-size:46px; margin:0 auto 24px; transform:rotate(-6deg); }
@@ -34,7 +46,16 @@ h1 span { color:#b65b38; }
 #messages { max-width:790px; margin:auto; }
 .message { display:flex; gap:12px; margin:22px 0; align-items:flex-start; }
 .avatar { flex-shrink:0; display:grid; place-items:center; width:34px; height:34px; border-radius:10px; background:#e6eedc; }
-.bubble { padding:14px 18px; border:1px solid var(--line); border-radius:0 14px 14px 14px; background:white; line-height:1.7; font-size:14px; white-space:pre-wrap; overflow-wrap:anywhere; }
+.bubble { padding:14px 18px; border:1px solid var(--line); border-radius:0 14px 14px 14px; background:white; line-height:1.7; font-size:14px; overflow-wrap:anywhere; }
+.bubble > :first-child { margin-top:0; }
+.bubble > :last-child { margin-bottom:0; }
+.bubble p { margin:0 0 12px; }
+.bubble ul, .bubble ol { margin:8px 0 12px; padding-left:22px; }
+.bubble li + li { margin-top:4px; }
+.bubble pre { overflow:auto; padding:12px; border-radius:8px; background:#f1f5ed; }
+.bubble code { padding:2px 4px; border-radius:4px; background:#f1f5ed; font-size:.92em; }
+.bubble pre code { padding:0; background:transparent; }
+.bubble a { color:var(--green); }
 .user { flex-direction:row-reverse; }
 .user .bubble { background:#eaf1e3; border-radius:14px 0 14px 14px; }
 .composer-area { padding:16px 28px 20px; }
@@ -47,4 +68,6 @@ form:focus-within { border-color:#6f9461; }
 .disclaimer { text-align:center; font-size:11px; color:#929b8b; margin:12px 0 0; }
 button:focus-visible { outline:3px solid #a5be92; outline-offset:3px; }
 @media(max-width:700px) { aside { display:none; } header { padding:18px 20px; } .scroll { padding:20px 16px; } .welcome { margin-top:14px; } .cards { gap:10px; } .card { padding:16px; } .composer-area { padding:12px 16px; } }
+@media(max-width:700px) { header > div { gap:7px; } .settings-panel { padding:14px 20px; } .settings-fields { flex-direction:column; } .save-settings { min-height:38px; } }
+@media(max-width:700px) { .api-key-notice { align-items:stretch; flex-direction:column; text-align:center; } }
 @media(prefers-reduced-motion:reduce) { .card { transition:none; } }
