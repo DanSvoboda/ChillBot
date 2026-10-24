@@ -38,7 +38,7 @@
 				</form>
 			</section>
 			<div class="api-key-notice" id="api-key-notice" hidden role="alert">
-				<span>No API key is configured. Go to API settings and set your api_key to start chatting.</span>
+				<span>No API key is configured. Go to https://jupyter.vse.cz/user/svod15@vse.cz/lab/tree/exchange/4iz566-582_ZS2627/03_llm.ipynb, replace with your name svod15@vse.cz, there you will find API key</span>
 				<button id="api-key-notice-action" type="button">Go to API settings</button>
 			</div>
 			<div class="scroll" id="chat-scroll">
@@ -55,7 +55,7 @@
 					</div>
 					<p class="tip">Not sure where to start? Pick a topic above.</p>
 				</section>
-				<div id="messages" role="log" aria-live="polite" aria-label="Conversation"></div>
+				<div id="messages" role="log" aria-live="polite" aria-busy="false" aria-label="Conversation"></div>
 			</div>
 			<div class="composer-area">
 				<form id="chat-form"><input id="question" aria-label="Your chilli question" placeholder="Ask anything about chillies…" autocomplete="off" required maxlength="4000"><button class="send" aria-label="Send message" type="submit">↑</button></form>

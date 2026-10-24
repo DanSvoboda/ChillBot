@@ -6,11 +6,6 @@ const scroller = document.getElementById('chat-scroll');
 const send = form.querySelector('button');
 let history = [], controller = null, retryQuestion = null;
 
-function responseText(data) {
-	const content = data.response?.choices?.[0]?.message?.content;
-	return typeof content === 'string' ? content : '';
-}
-
 function renderMessage(bubble, text, role) {
 	if (role !== 'assistant' || !window.marked || !window.DOMPurify) {
 		bubble.textContent = text;
@@ -44,6 +39,7 @@ async function sendQuestion(question) {
 	input.value = '';
 	send.disabled = true;
 	const pending = addMessage('Thinking about chillies…', 'assistant');
+	messages.setAttribute('aria-busy', 'true');
 	const request = new AbortController();
 	controller = request;
 	try {
@@ -52,18 +48,44 @@ async function sendQuestion(question) {
 		const headers = { 'Content-Type':'application/json' };
 		if (csrf) headers['X-CSRFToken'] = decodeURIComponent(csrf.slice(10));
 		const response = await fetch('/api/chat', { method:'POST', headers, credentials:'same-origin', body:JSON.stringify({ message:question, messages:history }), signal:request.signal });
-		const contentType = response.headers.get('content-type') || '';
-		const data = contentType.includes('application/json')
-			? await response.json()
-			: { error: `The server returned an unexpected response (${response.status}). Please try again.` };
 		if (!response.ok) {
+			const data = await response.json().catch(() => ({}));
 			const error = new Error(data.error || 'Request failed');
 			error.code = response.status;
 			throw error;
 		}
-		const reply = responseText(data);
-		if (!reply.trim()) throw new Error('Invalid reply');
-		renderMessage(pending, reply, 'assistant');
+
+		if (!response.body) throw new Error('The server did not provide a response stream.');
+		const reader = response.body.getReader();
+		const decoder = new TextDecoder();
+		let buffer = '';
+		let reply = '';
+
+		while (true) {
+			const { value, done } = await reader.read();
+			if (done) break;
+			buffer += decoder.decode(value, { stream: true });
+
+			const events = buffer.split('\n\n');
+			buffer = events.pop();
+			for (const event of events) {
+				const lines = event.split('\n');
+				const dataLine = lines.find(line => line.startsWith('data: '));
+				if (!dataLine) continue;
+				const data = dataLine.slice(6);
+				if (data === '[DONE]') continue;
+
+				const payload = JSON.parse(data);
+				if (lines.some(line => line === 'event: error')) {
+					throw new Error(payload.error || 'The AI provider could not finish the response.');
+				}
+				reply += payload.content || '';
+				renderMessage(pending, reply, 'assistant');
+				scroller.scrollTop = scroller.scrollHeight;
+			}
+		}
+
+		if (!reply.trim()) throw new Error('The AI returned an empty response.');
 		history.push({ role:'assistant', content:reply });
 	} catch (error) {
 		if (error.name !== 'AbortError') {
@@ -77,6 +99,7 @@ async function sendQuestion(question) {
 			history.pop();
 		}
 	} finally {
+		messages.setAttribute('aria-busy', 'false');
 		if (controller === request) { controller = null; send.disabled = false; input.focus(); }
 		scroller.scrollTop = scroller.scrollHeight;
 	}

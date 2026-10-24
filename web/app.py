@@ -1,5 +1,7 @@
 import flask
+from datetime import datetime as dt
 from flask import render_template
+import json
 from openai import OpenAI, OpenAIError
 from web.mcp_client import get_MCP_urls
 from web.rag import DocumentDB
@@ -23,25 +25,70 @@ def chat():
         return flask.jsonify({
             "error": "No API key configured. Open API settings and add your api_key before chatting.",
         }), 403
-    messages = flask.request.json.get("messages")
+    request_data = flask.request.json or {}
+    messages = request_data.get("messages")
     if not messages:
         return flask.jsonify({"error": "No messages provided"}), 400
 
     global mcp_servers
+    print(f"Asking for Documents {dt.now()}")
+    latest_message = messages[-1]
+    if not isinstance(latest_message, dict) or not latest_message.get("content"):
+        return flask.jsonify({"error": "The latest message must contain content."}), 400
+
+    known_documents = vector_db.get_documents(latest_message["content"])
+    messages.append({
+        "role": "assistant",
+        "content": (
+            "Here are the relevant documents from the knowledge base. "
+            "Use them as reference material:\n\n"
+            + "\n\n".join(known_documents)
+        ),
+    })
+    print(f"Documents received {dt.now()}")
     try:
-        response = client.chat.completions.create(
+        stream = client.chat.completions.create(
             model="qwen3.6-35b",
             messages=messages,
+            stream=True,
         )
     except OpenAIError:
         return flask.jsonify({
             "error": "The AI provider could not process the request. Check your API key and try again.",
         }), 502
 
-    return flask.jsonify({
-        "messages": messages,
-        "response": response.model_dump(),
-    })
+    def generate():
+        try:
+            for chunk in stream:
+                content = (
+                    chunk.choices[0].delta.content
+                    if chunk.choices
+                    else None
+                )
+                if content:
+                    yield f"data: {json.dumps({'content': content})}\n\n"
+            yield "data: [DONE]\n\n"
+        except OpenAIError:
+            yield (
+                "event: error\n"
+                "data: "
+                + json.dumps({
+                    "error": (
+                        "The AI provider could not finish the response. "
+                        "Check your API key and try again."
+                    )
+                })
+                + "\n\n"
+            )
+
+    return flask.Response(
+        flask.stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 @app.route("/api/update_client", methods=["POST"])
 def update_client():
