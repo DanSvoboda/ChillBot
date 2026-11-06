@@ -1,0 +1,74 @@
+Zdroj dat: 
+FAOSTAT – Food and Agriculture Organization of the United Nations (FAO)
+https://www.fao.org/faostat/en/#data/QCL
+https://www.fao.org/faostat/en/#data/QCL/metadata 
+
+Časové období: 1961–2024
+Granularita: rok
+Lokalita: země a území 
+Zdrojová data pocházejí především z oficiálních statistik jednotlivých států.
+FAO používá také odhady a imputace chybějících hodnot.
+Data jsou každoročně revidována.
+
+Data: 
+Rod: Capsicum (sladké papriky, chilli papričky) a Pimenta (nové koření) – bohužel nelze zajistit lepší granularitu, která by obsahovala pouze papriky. Pro zjednodušení bereme vše jako papriky. 
+(01231) Fresh peppers vyjadřuje čerstvé papriky, statisticky zelenina. 
+(01652) Dry peppers vyjadřuje sušené ale jinak nezpracované papriky, statisticky koření a aromatické plodiny.  
+
+Počet řádků: 
+Fresh peppers: 20329
+Dry peppers: 11517
+
+Sloupce: 
+    Domain Code
+    Domain (oblast statistiky)
+    Area Code (M49)
+    Area (země)
+    Element Code
+    Element (typ údaje – produkce, rozloha, výnosy (produkce/rozloha))
+    Item Code (CPC)
+    Item (položka – čerstvé/sušené papriky)
+    Year Code
+    Year
+    Unit (jednotka – t, ha, kg/ha)
+    Value (číselný údaj)
+    Flag
+    Flag Description
+    Note
+
+Sloupce obsahující prázdné hodnoty: Value, Note
+
+Typy hodnot ve sloupci Flag: 
+A	Oficiální hodnota
+E	Odhadovaná hodnota
+I	Imputovaná hodnota
+M	Chybějící hodnota
+X	Hodnota převzatá z externího zdroje
+
+Flag Fresh	Dry
+A	56,9 %	24,6 %
+E	28,8 %	52,5 %
+I	7,2 %	16,4 %
+M	5,3 %	5,8 %
+X	1,8 %	0,7 %
+
+Vzhledem k tomu, že se jedná o data poskytovaná FAOSTAT a tomu, že předmět je zaměřen na programování v Pythonu (a nikoli přesnou analýzu) shledávám odhadované a imputované údaje jako dostačující. 
+
+Dataset obsahuje historické hodnoty a tudíž i historické země jako Sovětský svaz, Jugoslávie, Československo apod. 
+
+Chybějící hodnoty: 
+DRY PEPPERS
+                Missing  Missing (%)
+area_harvested    592.0        14.41
+production        227.0         5.52
+yield             662.0        16.11
+
+FRESH PEPPERS
+                Missing  Missing (%)
+area_harvested    733.0        10.22
+production        544.0         7.59
+yield             980.0        13.66
+
+Pokud chybí jen jedna hodnota, jedná se vždy o výnos (yield) – bylo dopočítáno na základě zbývajících dvou hodnot. 
+
+
