@@ -12,7 +12,7 @@ RUN python -m pip install --no-cache-dir --index-url https://download.pytorch.or
     && python -m pip install --no-cache-dir .
 
 COPY web/ ./web/
-COPY mcp_servers/ ./mcp_servers/
+COPY tools/ ./tools/
 
 RUN groupadd --gid 10001 chillbot \
     && useradd --uid 10001 --gid chillbot --create-home chillbot \
@@ -21,6 +21,6 @@ RUN groupadd --gid 10001 chillbot \
 
 USER chillbot
 
-EXPOSE 5000 8000
+EXPOSE 5000
 
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", "--timeout", "120", "web.app:app"]

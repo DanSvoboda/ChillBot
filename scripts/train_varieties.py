@@ -1,6 +1,6 @@
 import torch
-from mcp_servers.variety_classifier.model import variety_model
-import mcp_servers.variety_classifier.model as classifier_model
+from tools.variety_model import variety_model
+import tools.variety_model as classifier_model
 from huggingface_hub import HfApi
 
 MODEL_PATH = classifier_model.PATH_VARIETY_MODEL

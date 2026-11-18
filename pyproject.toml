@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "chillbot"
 version = "0.1.0"
-description = "AI chatbot about chilli peppers with RAG and MCP model servers"
+description = "AI chatbot about chilli peppers with RAG and ML model tools"
 requires-python = ">=3.11"
 dependencies = [
 	"chromadb==1.5.9",
@@ -18,7 +18,6 @@ dependencies = [
 	"pypdf==6.20.0",
 	"numpy",
 	"pandas",
-	"mcp==2.3.0",
 	"torch",
 	"torchvision",
 	"Pillow",

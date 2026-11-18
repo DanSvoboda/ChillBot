@@ -13,16 +13,76 @@ LLM_MODEL = os.environ["LLM_MODEL"]
 FLASK_HOST = os.environ["FLASK_HOST"]
 FLASK_PORT = int(os.environ["FLASK_PORT"])
 
-from web.mcp_client import get_MCP_urls
+from tools.registry import TOOLS, run_tool
 from web.rag import DocumentDB
 
+# Kolikrat po sobe muze LLM volat nastroje, nez musi odpovedet textem
+MAX_TOOL_ROUNDS = 5
 
 client = None
 app = flask.Flask(__name__)
 vector_db = DocumentDB()
 
-global mcp_servers
-mcp_servers = get_MCP_urls()
+
+def create_stream(messages, allow_tools=True):
+    return client.chat.completions.create(
+        model=LLM_MODEL,
+        messages=messages,
+        tools=TOOLS,
+        tool_choice="auto" if allow_tools else "none",
+        stream=True,
+    )
+
+
+def stream_with_tools(messages, stream):
+    """
+    Streams the answer text. When the LLM asks for tools, runs them locally,
+    adds the results to the conversation and asks the LLM again.
+    """
+    # o jedno kolo vic: posledni stream je bez nastroju a musi odpovedet textem
+    for tool_round in range(MAX_TOOL_ROUNDS + 1):
+        content = ""
+        tool_calls = {}
+        for chunk in stream:
+            if not chunk.choices:
+                continue
+            delta = chunk.choices[0].delta
+            if delta.content:
+                content += delta.content
+                yield delta.content
+            # argumenty volani nastroje chodi po kouskach, skladame je podle indexu
+            for call_delta in delta.tool_calls or []:
+                call = tool_calls.setdefault(call_delta.index, {"id": "", "name": "", "arguments": ""})
+                if call_delta.id:
+                    call["id"] = call_delta.id
+                if call_delta.function and call_delta.function.name:
+                    call["name"] += call_delta.function.name
+                if call_delta.function and call_delta.function.arguments:
+                    call["arguments"] += call_delta.function.arguments
+
+        if not tool_calls:
+            return
+
+        messages.append({
+            "role": "assistant",
+            "content": content or None,
+            "tool_calls": [
+                {
+                    "id": call["id"],
+                    "type": "function",
+                    "function": {"name": call["name"], "arguments": call["arguments"]},
+                }
+                for call in tool_calls.values()
+            ],
+        })
+        for call in tool_calls.values():
+            print(f"Running tool {call['name']}({call['arguments']}) {dt.now()}")
+            messages.append({
+                "role": "tool",
+                "tool_call_id": call["id"],
+                "content": run_tool(call["name"], call["arguments"]),
+            })
+        stream = create_stream(messages, allow_tools=tool_round + 1 < MAX_TOOL_ROUNDS)
 
 @app.route("/")
 def index():
@@ -40,7 +100,6 @@ def chat():
     if not messages:
         return flask.jsonify({"error": "No messages provided"}), 400
 
-    global mcp_servers
     print(f"Asking for Documents {dt.now()}")
     latest_message = messages[-1]
     if not isinstance(latest_message, dict) or not latest_message.get("content"):
@@ -57,11 +116,7 @@ def chat():
     })
     print(f"Documents received {dt.now()}")
     try:
-        stream = client.chat.completions.create(
-            model=LLM_MODEL,
-            messages=messages,
-            stream=True,
-        )
+        stream = create_stream(messages)
     except OpenAIError:
         return flask.jsonify({
             "error": "The AI provider could not process the request. Check your API key and try again.",
@@ -69,14 +124,8 @@ def chat():
 
     def generate():
         try:
-            for chunk in stream:
-                content = (
-                    chunk.choices[0].delta.content
-                    if chunk.choices
-                    else None
-                )
-                if content:
-                    yield f"data: {json.dumps({'content': content})}\n\n"
+            for content in stream_with_tools(messages, stream):
+                yield f"data: {json.dumps({'content': content})}\n\n"
             yield "data: [DONE]\n\n"
         except OpenAIError:
             yield (
