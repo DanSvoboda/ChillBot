@@ -19,6 +19,9 @@ class variety_model(nn.Module):
     def __init__(self, load_data=True):
         super(variety_model, self).__init__()
 
+        # Průměr a směrodatná odchylka kanálů R, G, B z datasetu ImageNet, na kterém je ResNet18 předtrénovaný.
+        # Obrázky se normalizují stejně jako při předtrénování: (pixel - mean) / std.
+        # Musí být stejné při trénování i předpovídání.
         self.TF_MEAN = [0.485, 0.456, 0.406]
         self.TF_STD = [0.229, 0.224, 0.225]
 
