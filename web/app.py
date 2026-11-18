@@ -2,7 +2,17 @@ import flask
 from datetime import datetime as dt
 from flask import render_template
 import json
+import os
 from openai import OpenAI, OpenAIError
+from dotenv import load_dotenv
+
+load_dotenv()
+
+LLM_BASE_URL = os.environ["LLM_BASE_URL"]
+LLM_MODEL = os.environ["LLM_MODEL"]
+FLASK_HOST = os.environ["FLASK_HOST"]
+FLASK_PORT = int(os.environ["FLASK_PORT"])
+
 from web.mcp_client import get_MCP_urls
 from web.rag import DocumentDB
 
@@ -48,7 +58,7 @@ def chat():
     print(f"Documents received {dt.now()}")
     try:
         stream = client.chat.completions.create(
-            model="qwen3.6-35b",
+            model=LLM_MODEL,
             messages=messages,
             stream=True,
         )
@@ -100,7 +110,7 @@ def update_client():
         return flask.jsonify({"error": "An api_key is required."}), 400
 
     client = OpenAI(
-        base_url="https://litellm.vse.cz/v1/",
+        base_url=LLM_BASE_URL,
         api_key=api_key,
 
 )
@@ -126,4 +136,4 @@ def get_models():
     })
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host=FLASK_HOST, port=FLASK_PORT)

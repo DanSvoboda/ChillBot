@@ -1,13 +1,19 @@
 import base64
 import io
+import os
+from dotenv import load_dotenv
 from mcp.server import MCPServer
 from PIL import Image
+
+load_dotenv()
+
+HOST = os.environ["MCP_VARIETY_LOCAL_HOST"]
+PORT = int(os.environ["MCP_VARIETY_LOCAL_PORT"])
+MCP_SERVER_URL = os.environ["MCP_VARIETY_URL"]
+
 from mcp_servers.variety_classifier.model import variety_model
 
 mcp = MCPServer()
-
-HOST = "localhost"
-PORT = 5001
 
 _model = None
 
@@ -45,7 +51,7 @@ def get_MCP():
             "type": "mcp",
             "server_label": "variety_classifier",
             "description": "Classifies the variety of chilli plants from images.",
-            "server_url": f"http://{HOST}:{PORT}/mcp",
+            "server_url": MCP_SERVER_URL,
             "require_approval": "never", 
         }
 

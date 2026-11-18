@@ -2,7 +2,10 @@ import torch
 from mcp_servers.variety_classifier.model import variety_model
 import mcp_servers.variety_classifier.model as classifier_model
 from huggingface_hub import HfApi
- 
+
+MODEL_PATH = classifier_model.PATH_VARIETY_MODEL
+HF_MODEL_REPO_ID = classifier_model.HF_MODEL_REPO_ID
+
 def train(model, train_loader, criterion, optimizer, device):
     print("Starting training...")
     model.train()
@@ -37,7 +40,7 @@ def evaluate(model, test_loader, criterion, device):
     print(f"Test loss: {test_loss:.4f}, Accuracy: {accuracy:.2%}")
     return test_loss, accuracy
 
-def save_model(model, optimizer, epoch, accuracy, path=classifier_model.PATH_VARIETY_MODEL):
+def save_model(model, optimizer, epoch, accuracy, path=MODEL_PATH):
     torch.save({
         "epoch": epoch,
         "model": model.model.state_dict(),
@@ -57,11 +60,11 @@ if __name__ == "__main__":
             save_model(model, model.optimizer, epoch, accuracy)    
        
         api = HfApi()
-        api.create_repo("DanSvobodaVSE/chillbot-varieties", repo_type="model", exist_ok=True)
+        api.create_repo(HF_MODEL_REPO_ID, repo_type="model", exist_ok=True)
         api.upload_file(
-            path_or_fileobj="models/varieties/checkpoint.pt",
+            path_or_fileobj=MODEL_PATH,
             path_in_repo="checkpoint.pt",
-            repo_id="DanSvobodaVSE/chillbot-varieties",
+            repo_id=HF_MODEL_REPO_ID,
         )
 
             

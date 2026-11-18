@@ -1,13 +1,19 @@
 import os
+from pathlib import Path
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchvision import transforms, datasets, models
 from huggingface_hub import hf_hub_download
+from dotenv import load_dotenv
 
-PATH_VARIETY_MODEL = "models/varieties/checkpoint.pt"
-PATH_TRAINING_DATA = "data/training/varieties/train"
-PATH_TESTING_DATA = "data/training/varieties/test"
+load_dotenv()
+
+PATH_VARIETY_MODEL = Path(os.environ["VARIETY_MODEL_PATH"])
+PATH_TRAINING_DATA = Path(os.environ["VARIETY_TRAINING_DATA_PATH"])
+PATH_TESTING_DATA = Path(os.environ["VARIETY_TESTING_DATA_PATH"])
+HF_MODEL_REPO_ID = os.environ["HF_MODEL_REPO_ID"]
+
 
 class variety_model(nn.Module):
     def __init__(self, load_data=True):
@@ -36,15 +42,16 @@ class variety_model(nn.Module):
 
         # Read the checkpoint once (if it exists) - it contains weights AND class names
         checkpoint = None
-        if os.path.exists(PATH_VARIETY_MODEL):
+        if PATH_VARIETY_MODEL.exists():
             checkpoint = torch.load(PATH_VARIETY_MODEL, map_location=self.device)
         else:
             print(f"No trained model found at {PATH_VARIETY_MODEL}. Please run the training script first.")
-            path = hf_hub_download(
-                repo_id="DanSvobodaVSE/chillbot-varieties",
-                filename="checkpoint.pt",
-                local_dir=PATH_VARIETY_MODEL,
+            checkpoint_path = hf_hub_download(
+                repo_id=HF_MODEL_REPO_ID,
+                filename=PATH_VARIETY_MODEL.name,
+                local_dir=str(PATH_VARIETY_MODEL.parent),
             )
+            checkpoint = torch.load(checkpoint_path, map_location=self.device)
 
         # Training needs the datasets; the server only needs class names
         if load_data:

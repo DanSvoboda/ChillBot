@@ -4,14 +4,21 @@ from pathlib import Path
 from textwrap import fill
 
 import chromadb
+from dotenv import load_dotenv
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pypdf import PdfReader
 
-KNOWLEDGE_DIR = Path(os.getenv("KNOWLEDGE_PATH", "data/knowledge"))
-VECTOR_STORE_DIR = Path(os.getenv("VECTOR_STORE_PATH", "data/vector_store"))
+load_dotenv()
+
+KNOWLEDGE_DIR = Path(os.environ["KNOWLEDGE_PATH"])
+VECTOR_STORE_DIR = Path(os.environ["VECTOR_STORE_PATH"])
+COLLECTION_NAME = os.environ["RAG_COLLECTION"]
+CHUNK_SIZE = int(os.environ["RAG_CHUNK_SIZE"])
+CHUNK_OVERLAP = int(os.environ["RAG_CHUNK_OVERLAP"])
+RETRIEVAL_COUNT = int(os.environ["RAG_TOP_K"])
 
 client = chromadb.PersistentClient(path=str(VECTOR_STORE_DIR))
-collection = client.get_or_create_collection("chilli_collection")
+collection = client.get_or_create_collection(COLLECTION_NAME)
 
 
 class DocumentDB:
@@ -34,8 +41,8 @@ class DocumentDB:
             )
 
         text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=200,
+            chunk_size=CHUNK_SIZE,
+            chunk_overlap=CHUNK_OVERLAP,
         )
 
         pdf_files = sorted(KNOWLEDGE_DIR.rglob("*.pdf"))
@@ -73,7 +80,7 @@ class DocumentDB:
     def get_documents(self, query):
         results = self.collection.query(
             query_texts=[query],
-            n_results=5
+            n_results=RETRIEVAL_COUNT
         )
         return results["documents"]
 

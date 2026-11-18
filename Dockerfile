@@ -1,4 +1,4 @@
-FROM python:3.11-slim-trixie
+FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -7,15 +7,20 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY pyproject.toml ./
-COPY flask/ ./flask/
+
+RUN python -m pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch torchvision \
+    && python -m pip install --no-cache-dir .
+
+COPY web/ ./web/
 COPY mcp_servers/ ./mcp_servers/
 
-RUN python -m pip install --no-cache-dir . \
-    && groupadd --gid 10001 chillbot \
-    && useradd --uid 10001 --gid chillbot --no-create-home chillbot
+RUN groupadd --gid 10001 chillbot \
+    && useradd --uid 10001 --gid chillbot --create-home chillbot \
+    && mkdir -p /app/models/varieties /app/data/vector_store \
+    && chown -R chillbot:chillbot /app/models /app/data
 
 USER chillbot
 
-EXPOSE 5000
+EXPOSE 5000 8000
 
-CMD ["gunicorn", "--chdir", "flask", "--bind", "0.0.0.0:5000", "--workers", "1", "--timeout", "120", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", "--timeout", "120", "web.app:app"]

@@ -2,17 +2,24 @@ import numpy as np
 import pandas as pd
 #import matplotlib.pyplot as plt
 
+import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
+
+FRESH_PEPPERS_DATA_PATH = Path(os.environ["FRESH_PEPPERS_DATA_PATH"])
+DRY_PEPPERS_DATA_PATH = Path(os.environ["DRY_PEPPERS_DATA_PATH"])
+PRODUCTION_DATA_PATH = Path(os.environ["PRODUCTION_DATA_PATH"])
+CLIMATE_DATA_PATH = Path(os.environ["CLIMATE_DATA_PATH"])
+PRICE_DATA_PATH = Path(os.environ["PRICE_DATA_PATH"])
 
 class DataPrep:
     def __init__(self):
-        # nacteni CSV
-        self.data_path = Path("data/training/production")
+        self.fresh = pd.read_csv(FRESH_PEPPERS_DATA_PATH)
+        self.dry = pd.read_csv(DRY_PEPPERS_DATA_PATH)
 
-        self.fresh = pd.read_csv(self.data_path / "papriky-fresh.csv")
-        self.dry = pd.read_csv(self.data_path / "papriky-dry.csv")
-
-        self.productionData = pd.read_csv(self.data_path / "papriky-production.csv") if (self.data_path / "papriky-production.csv").exists() else self.doDataPrep()
+        self.productionData = pd.read_csv(PRODUCTION_DATA_PATH) if PRODUCTION_DATA_PATH.exists() else self.doDataPrep()
 
         # zobraz prvnich 5 radku
     def doDataPrep(self):
@@ -263,7 +270,7 @@ class DataPrep:
         """
         peppers_pivot = peppers_pivot[(peppers_pivot["area_harvested"] != 0) & (peppers_pivot["production"] > 0)]
         
-        climate_data = pd.read_csv("data/training/production/temperatureChange.csv")
+        climate_data = pd.read_csv(CLIMATE_DATA_PATH)
         columns_to_drop = ["Domain Code", "Domain", "Area Code (M49)", "Element Code", "Months Code", "Months", "Year Code"]
         climate_data = climate_data.drop(columns=columns_to_drop)
 
@@ -296,7 +303,7 @@ class DataPrep:
         )
         print(final_data.head())
         
-        prices = pd.read_csv("data/training/production/pricePeppers.csv")
+        prices = pd.read_csv(PRICE_DATA_PATH)
         columns_to_drop = ["Domain Code", "Domain", "Area Code (M49)", "Element Code", "Year Code", "Item Code (CPC)", "Year Code", "Months Code", "Months"]
         prices = prices.drop(columns=columns_to_drop)
         prices["Item"] = prices["Item"].replace({
@@ -336,11 +343,14 @@ class DataPrep:
             on=["area", "year", "peppers"],
         )   
         
-        copy_data = final_data[["area", "peppers", "year", "yield", "price_value", "climate_value_standard_deviation", "climate_value_temperature_change"]].copy()
+        copy_data = final_data[["area", "peppers", "year", "production", "yield", "area_harvested", "price_value", "climate_value_standard_deviation", "climate_value_temperature_change", "flag_prod"]].copy()
         copy_data["year"] += 1
-        
+
         copy_data = copy_data.rename(columns={
+            "flag_prod": "flag_prod_prev_year",
+            "production": "production_prev_year",
             "yield": "yield_prev_year",
+            "area_harvested": "area_harvested_prev_year",
             "price_value": "price_value_prev_year",
             "climate_value_standard_deviation": "climate_value_standard_deviation_prev_year",
             "climate_value_temperature_change": "climate_value_temperature_change_prev_year",
@@ -353,13 +363,47 @@ class DataPrep:
             on=["area", "peppers", "year"],
         )
         
-        final_data = final_data.dropna(subset=["yield_prev_year"]) 
+        final_data = final_data.dropna(subset=["production_prev_year"])
+
+        # hodnoty pred 2 lety -> trend (zmena) za minuly rok; urovne v tunach rikaji hlavne velikost zeme
+        prev2_data = final_data[["area", "peppers", "year", "production_prev_year", "yield_prev_year", "area_harvested_prev_year", "price_value_prev_year"]].copy()
+        prev2_data["year"] += 1
+        prev2_data = prev2_data.rename(columns=lambda c: c.replace("_prev_year", "_prev2_year"))
+
+        final_data = pd.merge(
+            final_data,
+            prev2_data,
+            how="left",
+            on=["area", "peppers", "year"],
+        )
+
+        # log-pomer = relativni zmena, srovnatelna mezi zememi; NaN kde chybi rok pred 2 lety (doplni imputer)
+        for col in ["production", "yield", "area_harvested", "price_value"]:
+            final_data[f"{col}_change_prev_year"] = np.log(
+                final_data[f"{col}_prev_year"] / final_data[f"{col}_prev2_year"]
+            )
+        # zmena plochy letos - znama pri setbe (osazena plocha ~ sklizena); neznamy zustava jen vynos (yield)
+        final_data["area_harvested_change_this_year"] = np.log(
+            final_data["area_harvested"] / final_data["area_harvested_prev_year"]
+        )
+        final_data = final_data.replace([np.inf, -np.inf], np.nan)
+
+        # vztah k production_rise neni linearni: beze zmeny (prenesene odhady) -> 35 % rise,
+        # maly rust -> 73 %, velky rust -> 52 % (navrat k prumeru); pro LogReg rozlozeno na znamenko a velikost
+        change = final_data["production_change_prev_year"]
+        final_data["production_flat_prev_year"] = (change == 0).astype(float).where(change.notna())
+        final_data["production_rose_prev_year"] = (change > 0).astype(float).where(change.notna())
+        final_data["production_abs_change_prev_year"] = change.abs()
+        final_data = final_data.drop(columns=[c for c in final_data.columns if c.endswith("_prev2_year")])
+
+        final_data["production_rise"] = (final_data["production"] > final_data["production_prev_year"]).astype(int)
         
-        final_data["production_rise"] = (final_data["yield"] > final_data["yield_prev_year"]).astype(int)
+        # remove such calculation columns from final dataset
+        final_data = final_data.drop(columns=["production"])
         
         # print(final_data["production_rise"].value_counts(normalize=True))
         # ulozit data do CSV
-        final_data.to_csv(self.data_path / "papriky-production.csv", index=False)
+        final_data.to_csv(PRODUCTION_DATA_PATH, index=False)
 
         return final_data
 
