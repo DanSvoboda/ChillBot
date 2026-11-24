@@ -1,85 +1,73 @@
-# ChillBot
+# ChillBot — AI chatbot o chilli papričkách
 
-AI chatbot o chilli paprickach s Flask frontendem a backendem a nastroji
-(ML modely), ktere LLM vola pres function calling.
+Celý projekt je v notebooku [`ChillBot.ipynb`](ChillBot.ipynb). Notebook se dá spustit
+odshora dolů (*Run All*) a postupně projde všechny čtyři části:
 
-## Struktura
+| Část | Komponenta | Co dělá |
+| --- | --- | --- |
+| **A** | Model predikce výnosu | Z dat FAOSTAT předpovídá, zda výnos paprik v dané zemi **vzroste** oproti minulému roku. |
+| **B** | Klasifikátor odrůd | Doladěný ResNet18, který z fotografie rozpozná **13 odrůd chilli**. |
+| **C** | Nástroje pro LLM | Oba modely jako funkce `predict_yield_rise` a `classify_plant_type`, které LLM volá přes function calling. |
+| **D** | Chatbot | LLM, který volá nástroje z části C a odpovídá s pomocí **RAG** nad PDF znalostní bází (ChromaDB). |
 
-```text
-web/            Flask aplikace a frontend
-tools/          Nastroje pro LLM: klasifikace odrud a predikce produkce
-data/
-  training/     Trenovaci fotografie a anotace pro oba modely
-  knowledge/    Dokumenty o chillipaprickach pro RAG
-  vector_store/ Vektorovy index dokumentu
-scripts/        Trenovani modelu a indexovani dokumentu
-models/         Ulozene modely pro klasifikatory
-tests/          Testy
-pyproject.toml  Zavislosti a nastaveni Python projektu
-Dockerfile      Image aplikace
-compose.yaml    Spusteni kontejneru a pripojeni dat
-.env.example    Vzor konfigurace bez tajnych hodnot
-```
+## Spuštění
 
-Nastroje `classify_plant_type` a `predict_production_rise` jsou obycejne
-Python funkce v `tools/`. Jejich popisy pro LLM jsou v `tools/registry.py`.
-
-## Architektura
-
-```mermaid
-flowchart LR
-    Browser[Prohlizec] --> Flask
-    subgraph App[Flask aplikace]
-        Flask[Flask: frontend a API]
-        Tools[tools/: nastroje]
-        Flask -->|volani funkce| Tools
-    end
-    Flask --> RAG[RAG: vektorovy index]
-    Flask <-->|function calling| LLM[LLM]
-    Tools --> Varieties[models/varieties]
-    Tools --> ProductionModel[models/production_clf.pkl]
-```
-
-Flask posle LLM seznam nastroju (`tools=`). Kdyz LLM pozada o volani
-nastroje, Flask spusti prislusnou funkci lokalne, vysledek vrati LLM a to
-pak odpovi uzivateli. LLM neni soucasti projektu; aplikace pouziva
-OpenAI-kompatibilni endpoint.
-
-## Rychle spusteni lokalne
-
-Pouzij Python 3.11+ a spust prikazy z korene projektu:
+Python 3.11+, z kořene repozitáře:
 
 ```powershell
+python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-if (!(Test-Path .env)) { Copy-Item .env.example .env }
 python -m pip install -e .
 ```
 
-Pri lokalnim spusteni se konfigurace nacita ze souboru `.env`.
+Pak otevřete `ChillBot.ipynb` a spusťte všechny buňky. Notebook čte soubory
+relativně ke kořeni projektu, takže kernel musí běžet v kořeni repozitáře.
 
-Spust Flask:
+Pro část D vyplňte v buňce **👉 Vyzkoušejte sami** proměnnou `API_KEY` (endpoint
+`litellm.vse.cz`, model `qwen3.6-35b`). Bez klíče se volání LLM přeskočí a zbytek
+notebooku doběhne. Otázku vyberete přes `QUESTION = QUESTIONS["..."]`, nebo
+`RUN_ALL = True` projede všechny testovací otázky.
 
-```powershell
-python -m web.app
+## Obsah notebooku
+
+### A — Predikce růstu výnosu
+
+- **Data:** FAOSTAT 1961–2024 — čerstvé a sušené papriky, změna teploty a ceny výrobců.
+- **Příprava:** vyřazení zaniklých států a duplicitní Číny, pivot `production` / `area_harvested` / `yield`, dopočet chybějícího výnosu, připojení klimatu, ceny a hodnot z předchozích let. Výstupem je `papriky-yield.csv` s cílem `yield_rise`; tím zůstává oddělený od staršího produkčního datasetu.
+- **Trénování:** Dummy, logistická regrese, Random Forest a SVC přes `GridSearchCV`. Validace na pěti časově uspořádaných blocích, test tvoří roky 2020+. Model se vybírá podle CV ROC AUC.
+- Nejlepší pipeline (předzpracování + model) se uloží do `models/yield_clf.pkl`.
+
+### B — Klasifikace odrůd z fotografie
+
+- **Data:** fotky 13 odrůd ve `data/training/varieties/{train,valid,test}/<odrůda>/`.
+- **Model:** ResNet18 předtrénovaný na ImageNetu s novou hlavou pro 13 tříd, Adam `lr=1e-4`, 10 epoch.
+- Trénování je vypnuté (`TRAIN = False`); notebook načte checkpoint `models/varieties/checkpoint.pt`, a pokud chybí, stáhne ho z Hugging Face (`DanSvobodaVSE/chillbot-varieties`). Vyhodnocuje se accuracy na testovací množině.
+
+### C — Nástroje pro LLM
+
+- `predict_yield_rise(...)`: vstupy popisuje pydantic třída `YieldInput`; všechna pole jsou nepovinná, chybějící hodnoty doplní imputer v pipeline.
+- `classify_plant_type(image_path)`: vrátí 3 nejpravděpodobnější odrůdy s pravděpodobnostmi.
+
+### D — Chatbot
+
+- **RAG:** `data/knowledge/papriky.pdf` se rozdělí na chunky (1000 znaků, překryv 200) a uloží do ChromaDB v `data/vector_store/`. K dotazu se přidá 5 nejpodobnějších chunků.
+- **Function calling:** LLM dostane popis nástrojů (`TOOLS`), aplikace požadovaná volání spustí lokálně a výsledek vrátí LLM (max. 5 kol).
+
+## Důležité soubory
+
+```text
+ChillBot.ipynb                      celý projekt
+data/
+  training/production/              FAOSTAT CSV + papriky-yield.csv
+  training/varieties/               fotografie odrůd (train / valid / test)
+  knowledge/papriky.pdf             znalostní báze pro RAG
+  vector_store/                     ChromaDB index (sestaví se sám, když je prázdný)
+models/
+  yield_clf.pkl                      model z části A
+  varieties/checkpoint.pt           model z části B
+pyproject.toml                      závislosti
 ```
 
-Otevri `http://127.0.0.1:5000`. V aplikaci otevri **API settings** a
-nastav API key pro OpenAI-kompatibilni endpoint.
-
-## Docker Compose
-
-Pokud mas pripraveny Docker Desktop, muzes konfiguraci overit a spustit:
-
-```powershell
-docker compose config --quiet
-docker compose up --build
-```
-
-Aplikace bude dostupna na `http://127.0.0.1:5000`. Model
-`models/production_clf.pkl` musi existovat a variety model se pri prvnim
-pouziti stahne z Hugging Face.
-Ukonceni:
-
-```powershell
-docker compose down
-```
+Ostatní složky (`web/`, `tools/`, `scripts/`, `tests/`, Docker soubory) jsou
+původní verze kódu jako Flask aplikace. Notebook z nich vychází (buňky jsou
+označené `adapted from: ...`), ale ke spuštění je nepotřebuje.
